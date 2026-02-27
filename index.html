@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Evaluación - Cielo Parque Residencial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hidden { display: none; }
+        .metric-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; text-align: center;}
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="container mx-auto max-w-4xl p-5">
+        
+        <header class="flex items-center justify-between pb-6 border-b mb-6 bg-white p-4 rounded-lg shadow">
+            <h1 class="text-2xl font-bold text-blue-800">Cielo Parque Residencial</h1>
+            <span class="text-sm text-gray-500">Módulo de Reclutamiento</span>
+        </header>
+
+        <div id="section-login" class="bg-white p-8 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">Registro del Aspirante</h2>
+            <p class="mb-4 text-gray-600">Bienvenido al proceso de evaluación para Agente de Prevención. Por favor ingrese sus datos para comenzar.</p>
+            <input type="text" id="applicant-name" placeholder="Nombre Completo" class="w-full p-2 border rounded mb-4" required>
+            <button onclick="startTest()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full">Comenzar Evaluación</button>
+        </div>
+
+        <div id="section-test" class="bg-white p-8 rounded-lg shadow-md hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Cuestionario Situacional</h2>
+                <span id="progress" class="text-sm font-bold text-blue-600">Pregunta 1 de 10</span>
+            </div>
+            
+            <div id="question-container" class="mb-6">
+                </div>
+
+            <button id="next-btn" onclick="nextQuestion()" class="bg-gray-800 text-white px-6 py-2 rounded hover:bg-black hidden">Siguiente</button>
+            <button id="submit-btn" onclick="calculateResults()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 hidden">Finalizar y Evaluar</button>
+        </div>
+
+        <div id="section-results" class="bg-white p-8 rounded-lg shadow-md hidden">
+            <h2 class="text-2xl font-bold mb-6 text-center">Informe de Evaluación Automático</h2>
+            
+            <div class="mb-6 p-4 bg-gray-50 rounded border">
+                <p><strong>Aspirante:</strong> <span id="res-name"></span></p>
+                <p><strong>Fecha:</strong> <span id="res-date"></span></p>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="metric-card">
+                    <div class="text-xs text-gray-500 uppercase">Confiabilidad</div>
+                    <div id="score-confiabilidad" class="text-3xl font-bold text-blue-600">0%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-xs text-gray-500 uppercase">Permanencia</div>
+                    <div id="score-permanencia" class="text-3xl font-bold text-green-600">0%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-xs text-gray-500 uppercase">Respeto Reglas</div>
+                    <div id="score-reglas" class="text-3xl font-bold text-purple-600">0%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="text-xs text-gray-500 uppercase">Puntualidad</div>
+                    <div id="score-puntualidad" class="text-3xl font-bold text-red-600">0%</div>
+                </div>
+            </div>
+
+            <div class="border-t pt-4">
+                <h3 class="font-semibold mb-2">Recomendación del Sistema:</h3>
+                <p id="system-recommendation" class="p-3 rounded text-center font-bold"></p>
+            </div>
+            
+            <button onclick="location.reload()" class="mt-6 bg-gray-500 text-white px-4 py-2 rounded w-full">Evaluar nuevo aspirante</button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- BASE DE DATOS DE PREGUNTAS Y PUNTUACIONES (Scoring Model) ---
+        // C=Confiabilidad, P=Permanencia, R=Reglas, T=Puntualidad (Time)
+        // Valores: -2 (muy negativo) a +2 (muy positivo)
+        const questions = [
+            {
+                q: "1. Un residente le ofrece una propina económica a cambio de dejar pasar a un proveedor sin registrarlo en la bitácora.",
+                options: [
+                    { text: "Acepto el dinero, pero registro al proveedor de todas formas.", scores: { C: -1, P: 0, R: -1, T: 0 } },
+                    { text: "Rechazo el dinero amablemente y cumplo el protocolo de registro.", scores: { C: 2, P: 1, R: 2, T: 0 } },
+                    { text: "Acepto el dinero y no lo registro para agilizar el tráfico.", scores: { C: -2, P: -1, R: -2, T: 0 } }
+                ]
+            },
+            {
+                 q: "2. Usted nota que las normas de seguridad actuales hacen que la entrada de autos sea lenta y los residentes se quejan.",
+                 options: [
+                    { text: "Sigo aplicando las normas estrictamente, la seguridad es primero.", scores: { C: 1, P: 1, R: 2, T: 1 } },
+                    { text: "Me salto algunos pasos del protocolo para acelerar el flujo y tener contentos a los vecinos.", scores: { C: -1, P: 1, R: -2, T: 0 } },
+                    { text: "Reporto la situación a mi supervisor y sugiero mejoras sin dejar de aplicar la norma.", scores: { C: 2, P: 2, R: 2, T: 1 } }
+                 ]
+            },
+            {
+                q: "3. ¿Dónde se ve usted profesionalmente en los próximos 2 a 3 años?",
+                options: [
+                    { text: "Trabajando aquí, buscando crecer dentro de la empresa de seguridad.", scores: { C: 1, P: 2, R: 1, T: 0 } },
+                    { text: "En otro empleo diferente, este es un trabajo temporal.", scores: { C: 0, P: -2, R: 0, T: 0 } },
+                    { text: "Teniendo mi propio negocio, estoy ahorrando para eso.", scores: { C: 0, P: -1, R: 0, T: 0 } }
+                ]
+            },
+            {
+                q: "4. Su relevo llega 15 minutos tarde por tercera vez en la semana sin avisar.",
+                options: [
+                    { text: "Me retiro exactamente a mi hora de salida, el puesto no puede quedar solo pero no es mi culpa.", scores: { C: -1, P: -1, R: -1, T: -2 } },
+                    { text: "Espero a que llegue y lo reporto inmediatamente con el supervisor.", scores: { C: 2, P: 1, R: 2, T: 2 } },
+                    { text: "Espero a que llegue y hablo con él seriamente, sin reportarlo esta vez.", scores: { C: 1, P: 2, R: 0, T: 1 } }
+                ]
+            },
+            {
+                q: "5. Si usted cometiera un error técnico grave en la seguridad que nadie notó, ¿qué haría?",
+                options: [
+                    { text: "Lo oculto y rezo para que no pase nada malo.", scores: { C: -2, P: 0, R: -2, T: 0 } },
+                    { text: "Lo reporto inmediatamente a mi jefe, asumiendo las consecuencias.", scores: { C: 2, P: 1, R: 2, T: 1 } },
+                    { text: "Trato de arreglarlo yo mismo sin decirle a nadie.", scores: { C: 0, P: 0, R: -1, T: 0 } }
+                ]
+            },
+            {
+                q: "6. Suponga que el reglamento del fraccionamiento prohíbe el uso de celular en turno, pero hay una emergencia familiar.",
+                options: [
+                    { text: "Uso el celular a escondidas donde no haya cámaras.", scores: { C: -1, P: 0, R: -2, T: 0 } },
+                    { text: "Pido autorización a la central o supervisor para hacer la llamada rápidamente.", scores: { C: 2, P: 1, R: 2, T: 1 } },
+                    { text: "No uso el celular, la regla es clara, espero a mi descanso.", scores: { C: 1, P: 2, R: 2, T: 1 } }
+                ]
+            },
+            {
+                q: "7. ¿Qué tan importante es para usted la puntualidad en su vida diaria?",
+                options: [
+                    { text: "Fundamental. Llego 10 minutos antes a todo.", scores: { C: 1, P: 1, R: 1, T: 2 } },
+                    { text: "Normal. Trato de llegar a tiempo, a veces se complica.", scores: { C: 0, P: 0, R: 0, T: 0 } },
+                    { text: "Relativa. 5 o 10 minutos de retraso no son graves.", scores: { C: -1, P: -1, R: -1, T: -2 } }
+                ]
+            },
+            {
+                q: "8. Un compañero le pide marcar su tarjeta de asistencia porque viene retrasado en el tráfico.",
+                options: [
+                    { text: "Le hago el favor, hoy por él mañana por mí.", scores: { C: -2, P: 1, R: -2, T: -1 } },
+                    { text: "Me niego rotundamente.", scores: { C: 2, P: 1, R: 2, T: 1 } },
+                    { text: "Ignoro la llamada y no hago nada.", scores: { C: 1, P: 0, R: 0, T: 0 } }
+                ]
+            },
+            {
+                q: "9. En sus empleos anteriores, ¿cuál ha sido la causa principal de su salida?",
+                options: [
+                    { text: "Recortes de personal o fin de contrato.", scores: { C: 0, P: 1, R: 0, T: 0 } },
+                    { text: "Me ofrecieron una mejor oportunidad económica.", scores: { C: 0, P: -1, R: 0, T: 0 } },
+                    { text: "Problemas con horarios o con jefes.", scores: { C: -1, P: -2, R: -1, T: -1 } }
+                ]
+            },
+            {
+                q: "10. ¿Está dispuesto a trabajar fines de semana y turnos rotativos de 12 horas constantemente?",
+                options: [
+                    { text: "Sí, no tengo inconveniente.", scores: { C: 1, P: 2, R: 1, T: 1 } },
+                    { text: "Prefiero turno fijo, pero si es necesario acepto.", scores: { C: 0, P: 1, R: 0, T: 0 } },
+                    { text: "No, busco algo de lunes a viernes.", scores: { C: 0, P: -2, R: 0, T: 0 } }
+                ]
+            }
+        ];
+
+        // MÁXIMOS POSIBLES POR CATEGORÍA (Para calcular %)
+        const maxScores = { C: 16, P: 14, R: 16, T: 9 };
+
+        // LÓGICA DE LA APP
+        let currentQuestion = 0;
+        let userScores = { C: 0, P: 0, R: 0, T: 0 };
+        let selectedOption = null;
+
+        function startTest() {
+            const name = document.getElementById('applicant-name').value;
+            if (!name) { alert("Por favor ingrese su nombre."); return; }
+            document.getElementById('section-login').classList.add('hidden');
+            document.getElementById('section-test').classList.remove('hidden');
+            showQuestion();
+        }
+
+        function showQuestion() {
+            selectedOption = null;
+            document.getElementById('next-btn').classList.add('hidden');
+            document.getElementById('submit-btn').classList.add('hidden');
+            
+            const qData = questions[currentQuestion];
+            document.getElementById('progress').innerText = `Pregunta ${currentQuestion + 1} de ${questions.length}`;
+            
+            let html = `<p class="text-lg mb-4 font-medium text-gray-800">${qData.q}</p><div class="space-y-3">`;
+            
+            qData.options.forEach((opt, index) => {
+                html += `
+                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 bg-white shadow-sm">
+                        <input type="radio" name="option" value="${index}" class="h-4 w-4 text-blue-600" onclick="selectOption(${index})">
+                        <span class="ml-3 text-gray-700">${opt.text}</span>
+                    </label>
+                `;
+            });
+            html += '</div>';
+            document.getElementById('question-container').innerHTML = html;
+        }
+
+        function selectOption(index) {
+            selectedOption = index;
+            if (currentQuestion < questions.length - 1) {
+                document.getElementById('next-btn').classList.remove('hidden');
+            } else {
+                document.getElementById('submit-btn').classList.remove('hidden');
+            }
+        }
+
+        function nextQuestion() {
+            if (selectedOption === null) return;
+            // Sumar puntos
+            const scores = questions[currentQuestion].options[selectedOption].scores;
+            for (let key in scores) { userScores[key] += scores[key]; }
+            
+            currentQuestion++;
+            showQuestion();
+        }
+
+        function calculateResults() {
+            // Sumar puntos última pregunta
+            if (selectedOption !== null) {
+                const scores = questions[currentQuestion].options[selectedOption].scores;
+                for (let key in scores) { userScores[key] += scores[key]; }
+            }
+
+            document.getElementById('section-test').classList.add('hidden');
+            document.getElementById('section-results').classList.remove('hidden');
+
+            // Set datos básicos
+            document.getElementById('res-name').innerText = document.getElementById('applicant-name').value;
+            document.getElementById('res-date').innerText = new Date().toLocaleDateString();
+
+            // Calcular porcentajes (Evitar negativos y no superar 100%)
+            const calcPct = (actual, max) => Math.min(100, Math.max(0, Math.round((actual / max) * 100)));
+
+            const finalPct = {
+                C: calcPct(userScores.C, maxScores.C),
+                P: calcPct(userScores.P, maxScores.P),
+                R: calcPct(userScores.R, maxScores.R),
+                T: calcPct(userScores.T, maxScores.T)
+            };
+
+            // Mostrar en pantalla
+            document.getElementById('score-confiabilidad').innerText = finalPct.C + '%';
+            document.getElementById('score-permanencia').innerText = finalPct.P + '%';
+            document.getElementById('score-reglas').innerText = finalPct.R + '%';
+            document.getElementById('score-puntualidad').innerText = finalPct.T + '%';
+
+            // Recomendación Lógica
+            let rec = document.getElementById('system-recommendation');
+            if (finalPct.C >= 75 && finalPct.R >= 70 && finalPct.P >= 60) {
+                rec.innerText = "RECOMENDADO: Perfil íntegro y estable.";
+                rec.className = "p-3 rounded text-center font-bold bg-green-100 text-green-800";
+            } else if (finalPct.C < 50 || finalPct.R < 50) {
+                rec.innerText = "NO RECOMENDADO: Riesgo en integridad o respeto a normas.";
+                rec.className = "p-3 rounded text-center font-bold bg-red-100 text-red-800";
+            } else {
+                rec.innerText = "RESERVA: Requiere entrevista profunda para validar dudas.";
+                rec.className = "p-3 rounded text-center font-bold bg-yellow-100 text-yellow-800";
+            }
+        }
+    </script>
+</body>
+</html>
