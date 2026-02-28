@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Bitácora de Agentes Activos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-slate-100 p-8">
+    <div class="bg-white p-6 rounded shadow">
+        <h2 class="text-2xl font-bold mb-6">Bitácora de Desempeño Agentes Activos</h2>
+        <table class="w-full text-left">
+            <thead><tr class="bg-gray-200"><th class="p-2">Fecha</th><th class="p-2">Agente</th><th class="p-2">Estatus</th></tr></thead>
+            <tbody id="tabla-activos"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // (Copiar la misma configuración de Firebase de arriba)
+        const firebaseConfig = { /* ... tus datos ... */ };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        db.collection("evaluaciones_activos").orderBy("fecha", "desc").get().then((snap) => {
+            const tabla = document.getElementById('tabla-activos');
+            snap.forEach(doc => {
+                const d = doc.data();
+                tabla.innerHTML += `<tr><td class="p-2">${d.fecha}</td><td class="p-2">${d.nombre}</td><td class="p-2 text-green-600">Evaluado</td></tr>`;
+            });
+        });
+    </script>
+</body>
+</html>
