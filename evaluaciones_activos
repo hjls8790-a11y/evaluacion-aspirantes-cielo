@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Evaluación Desempeño - Agentes Activos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-slate-100 p-5">
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded shadow">
+        <h1 class="text-xl font-bold text-blue-900 mb-2">Evaluación Operativa - Cielo Parque</h1>
+        <p class="text-gray-600 mb-6">Esta evaluación es para seguimiento de desempeño de agentes activos.</p>
+        
+        <input type="text" id="agente-nombre" placeholder="Nombre completo del agente" class="w-full p-3 border rounded mb-4">
+        
+        <div id="test-container"></div>
+        <button id="submit-btn" onclick="saveActive()" class="bg-blue-800 text-white w-full py-3 rounded mt-4 hidden">Enviar Evaluación Operativa</button>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCeiIBgmX4KKhdQlwyyXCoI-zGZdFc0aso",
+            authDomain: "evaluacion-cielo.firebaseapp.com",
+            projectId: "evaluacion-cielo",
+            storageBucket: "evaluacion-cielo.firebasestorage.app",
+            messagingSenderId: "1071771625909",
+            appId: "1:1071771625909:web:d939265ad6a8e063b3d1fc"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const preguntas = [
+            { q: "1. Si detecta un equipo de seguridad (radio, cámara, lámpara) fallando, ¿qué hace?", options: ["Lo ignoro, no es mi área.", "Lo reporto inmediatamente en bitácora y aviso a central.", "Intento repararlo yo mismo aunque no sepa cómo."] },
+            { q: "2. ¿Cómo maneja un conflicto con un vecino que insulta su trabajo?", options: ["Respondo de igual manera para que me respete.", "Mantengo la calma, escucho y reporto el incidente al supervisor.", "Me retiro del lugar sin decir nada."] },
+            { q: "3. En caso de una emergencia real (fuego/robo), ¿cuál es su prioridad?", options: ["Verificar si tengo mi equipo completo.", "Asegurar la vida de residentes y avisar a autoridades.", "Grabar el evento con mi celular."] }
+        ];
+
+        // Lógica de carga
+        let html = "";
+        preguntas.forEach((p, i) => {
+            html += `<div class="mb-6"><p class="font-bold">${p.q}</p>`;
+            p.options.forEach(o => html += `<label class="block"><input type="radio" name="p${i}" value="${o}"> ${o}</label>`);
+            html += `</div>`;
+        });
+        document.getElementById('test-container').innerHTML = html;
+        document.getElementById('submit-btn').classList.remove('hidden');
+
+        function saveActive() {
+            const nombre = document.getElementById('agente-nombre').value;
+            db.collection("evaluaciones_activos").add({
+                nombre: nombre,
+                fecha: new Date().toLocaleString(),
+                resultado: "Evaluación completada"
+            }).then(() => alert("Registro operativo actualizado."));
+        }
+    </script>
+</body>
+</html>
