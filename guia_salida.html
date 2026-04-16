@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo de Salidas - Filtro Operativo El Cielo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root { --primary: #0f172a; --secondary: #0ea5e9; --danger: #ef4444; --bg: #f8fafc; --text: #334155; --card-bg: #ffffff; --border: #cbd5e1; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--primary); }
+        .header h1 { margin: 0; color: var(--primary); font-size: 1.8rem; }
+        .header p { margin: 5px 0 0 0; color: #64748b; font-weight: bold; }
+        .form-group { margin-bottom: 20px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: var(--primary); font-size: 0.95rem; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        .items-section { background: #f1f5f9; padding: 15px; border-radius: 8px; margin-top: 20px; }
+        .items-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .items-header h3 { margin: 0; color: var(--primary); }
+        .btn-add { background: var(--secondary); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .item-row { display: grid; grid-template-columns: 80px 1fr 1fr auto; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .btn-remove { background: var(--danger); color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .action-buttons { display: grid; grid-template-columns: 1fr 2fr; gap: 15px; margin-top: 30px; }
+        .btn-nuevo { background: var(--border); color: var(--text); padding: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        .btn-generar { background: var(--primary); color: white; padding: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        
+        /* PDF OCULTO */
+        #pdf-template { display: none; padding: 40px; background: white; color: black; font-family: Arial, sans-serif; width: 800px; box-sizing: border-box; }
+        .pdf-header { text-align: center; border-bottom: 3px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
+        .pdf-header h2 { margin: 0; font-size: 24px; text-transform: uppercase; }
+        .pdf-folio { text-align: right; color: #dc2626; font-weight: bold; font-size: 18px; margin-bottom: 20px; }
+        .pdf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; font-size: 14px; }
+        .pdf-dato { background: #f8fafc; padding: 8px; border: 1px solid #e2e8f0; }
+        .pdf-tabla { width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 14px; }
+        .pdf-tabla th, .pdf-tabla td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; }
+        .pdf-tabla th { background-color: #0f172a; color: white; }
+        .pdf-firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 60px; text-align: center; }
+        .linea-firma { border-top: 1px solid black; padding-top: 10px; font-size: 14px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Control de Salida de Materiales</h1>
+        <p>Módulo de Caseta - El Cielo Parque Residencial</p>
+    </div>
+
+    <div id="formulario-salida">
+        <div class="form-row">
+            <div class="form-group"><label>Lote / Obra de Origen:</label><input type="text" id="origen" placeholder="Ej. Lote 45" required></div>
+            <div class="form-group"><label>Contratista / Residente Responsable:</label><input type="text" id="responsable" placeholder="Nombre de quien autoriza" required></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>Quien retira (Trabajador):</label><input type="text" id="portador" placeholder="Nombre completo" required></div>
+            <div class="form-group"><label>Vehículo (Placas y Modelo):</label><input type="text" id="vehiculo" placeholder="Ej. NP300 - ABC-1234"></div>
+        </div>
+        <div class="form-group"><label>Motivo de la salida:</label><input type="text" id="motivo" placeholder="Ej. Fin de obra, reparación..." required></div>
+
+        <div class="items-section">
+            <div class="items-header">
+                <h3>Artículos / Herramientas</h3>
+                <button class="btn-add" onclick="window.agregarFila()">+ Agregar Fila</button>
+            </div>
+            <div id="contenedor-items"></div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn-nuevo" onclick="window.prepararNuevoPase()">Limpiar Formulario</button>
+            <button class="btn-generar" onclick="window.generarYGuardar()">Generar Guía Oficial y Registrar</button>
+        </div>
+    </div>
+</div>
+
+<div id="pdf-template">
+    <div class="pdf-header">
+        <h2>GUÍA DE SALIDA DE MATERIAL / EQUIPO</h2>
+        <p><strong>EL CIELO PARQUE RESIDENCIAL</strong> - SEGURIDAD Y VIGILANCIA</p>
+    </div>
+    <div class="pdf-folio">FOLIO: <span id="pdf-folio"></span></div>
+    <div class="pdf-grid">
+        <div class="pdf-dato"><strong>Fecha:</strong> <span id="pdf-fecha"></span></div>
+        <div class="pdf-dato"><strong>Lote/Origen:</strong> <span id="pdf-origen"></span></div>
+        <div class="pdf-dato"><strong>Autoriza:</strong> <span id="pdf-responsable"></span></div>
+        <div class="pdf-dato"><strong>Retira:</strong> <span id="pdf-portador"></span></div>
+        <div class="pdf-dato"><strong>Vehículo:</strong> <span id="pdf-vehiculo"></span></div>
+        <div class="pdf-dato"><strong>Motivo:</strong> <span id="pdf-motivo"></span></div>
+    </div>
+    <table class="pdf-tabla">
+        <thead><tr><th style="width: 10%;">CANT.</th><th style="width: 50%;">DESCRIPCIÓN</th><th style="width: 40%;">OBSERVACIONES / SERIE</th></tr></thead>
+        <tbody id="pdf-tabla-body"></tbody>
+    </table>
+    <div class="pdf-firmas">
+        <div><br><br><br><div class="linea-firma">FIRMA DE AUTORIZACIÓN<br><span id="pdf-firma-responsable"></span></div></div>
+        <div><br><br><br><div class="linea-firma">VERIFICACIÓN EN CASETA<br><span style="font-weight: normal; font-size: 12px;">Guardia en Turno</span></div></div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    // INSERTA AQUÍ TUS DATOS DE FIREBASE
+    const firebaseConfig = {
+        apiKey: "AIzaSyBU3oWLwBkIc_5riruLGc3dFS5wHo2RV0s",
+        authDomain: "sistema-vigilancia-6851e.firebaseapp.com",
+        projectId: "sistema-vigilancia-6851e",
+        storageBucket: "sistema-vigilancia-6851e.firebaseapp.com",
+        messagingSenderId: "714792023462",
+        appId: "1:714792023462:web:4f560ecf2a16e6a041cb7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.agregarFila = function() {
+        const contenedor = document.getElementById('contenedor-items');
+        const nuevaFila = document.createElement('div');
+        nuevaFila.className = 'item-row';
+        nuevaFila.innerHTML = `
+            <input type="text" class="item-cant" placeholder="Cant." required>
+            <input type="text" class="item-desc" placeholder="Descripción" required>
+            <input type="text" class="item-obs" placeholder="Marca/Serie">
+            <button class="btn-remove" onclick="this.parentElement.remove()">X</button>
+        `;
+        contenedor.appendChild(nuevaFila);
+    };
+
+    window.prepararNuevoPase = function() {
+        document.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
+        document.getElementById('contenedor-items').innerHTML = '';
+        window.agregarFila();
+    };
+
+    // Inicializar con una fila vacía
+    window.onload = () => window.agregarFila();
+
+    window.generarYGuardar = async function() {
+        const btn = document.querySelector('.btn-generar');
+        const origen = document.getElementById('origen').value.trim();
+        const responsable = document.getElementById('responsable').value.trim();
+        const portador = document.getElementById('portador').value.trim();
+        
+        if(!origen || !responsable || !portador) return alert("Faltan datos principales obligatorios.");
+
+        btn.innerText = "Registrando..."; btn.disabled = true;
+
+        const hoy = new Date();
+        const sufijo = String(Math.floor(Math.random() * 900) + 100); 
+        const folio = `SAL-${String(hoy.getDate()).padStart(2, '0')}${String(hoy.getMonth()+1).padStart(2, '0')}${hoy.getFullYear()}-${sufijo}`;
+
+        let itemsGuardar = [];
+        const tbodyPDF = document.getElementById('pdf-tabla-body');
+        tbodyPDF.innerHTML = ''; 
+
+        document.querySelectorAll('.item-row').forEach(fila => {
+            const cant = fila.querySelector('.item-cant').value.trim();
+            const desc = fila.querySelector('.item-desc').value.trim();
+            const obs = fila.querySelector('.item-obs').value.trim();
+            if(cant && desc) {
+                tbodyPDF.innerHTML += `<tr><td style="text-align:center"><strong>${cant}</strong></td><td>${desc}</td><td>${obs||'-'}</td></tr>`;
+                itemsGuardar.push({ cant, desc, obs });
+            }
+        });
+
+        if(itemsGuardar.length === 0) { btn.innerText = "Generar Guía"; btn.disabled = false; return alert("Agregue artículos."); }
+
+        // Llenar PDF
+        document.getElementById('pdf-folio').innerText = folio;
+        document.getElementById('pdf-fecha').innerText = hoy.toLocaleDateString('es-MX');
+        document.getElementById('pdf-origen').innerText = origen;
+        document.getElementById('pdf-responsable').innerText = responsable;
+        document.getElementById('pdf-firma-responsable').innerText = responsable;
+        document.getElementById('pdf-portador').innerText = portador;
+        document.getElementById('pdf-vehiculo').innerText = document.getElementById('vehiculo').value.trim() || 'Peatonal';
+        document.getElementById('pdf-motivo').innerText = document.getElementById('motivo').value.trim();
+
+        const registroData = {
+            folio: folio,
+            fecha: hoy.toLocaleDateString('es-MX') + ' ' + hoy.toLocaleTimeString('es-MX'),
+            timestamp: hoy.getTime(),
+            origen, responsable, portador, vehiculo: document.getElementById('vehiculo').value.trim(),
+            motivo: document.getElementById('motivo').value.trim(),
+            totalArticulos: itemsGuardar.length, items: itemsGuardar
+        };
+
+        try {
+            await setDoc(doc(db, "guias_salida", folio), registroData);
+            
+            const elementoPDF = document.getElementById('pdf-template');
+            elementoPDF.style.display = 'block';
+            html2pdf().set({
+                margin: 0.5, filename: `${folio}.pdf`, image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            }).from(elementoPDF).save().then(() => {
+                elementoPDF.style.display = 'none';
+                alert("Registro exitoso. PDF descargado.");
+                window.prepararNuevoPase();
+                btn.innerText = "Generar Guía Oficial y Registrar"; btn.disabled = false;
+            });
+        } catch (error) {
+            console.error(error);
+            alert("Error al conectar con el servidor.");
+            btn.innerText = "Generar Guía Oficial y Registrar"; btn.disabled = false;
+        }
+    };
+</script>
+</body>
+</html>
