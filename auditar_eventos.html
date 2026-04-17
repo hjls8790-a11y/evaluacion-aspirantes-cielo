@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoría de Coordinadores | El Cielo Parque Residencial</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
+        .header { background-color: #1a202c; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { margin: 0; font-size: 24px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #2d3748; color: white; text-transform: uppercase; font-size: 14px; }
+        tr:hover { background-color: #f1f5f9; }
+        .badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .bg-pending { background-color: #fef08a; color: #854d0e; }
+        .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-approve { background-color: #10b981; color: white; }
+        .btn-approve:hover { background-color: #059669; }
+        .btn-reject { background-color: #ef4444; color: white; margin-left: 5px; }
+        .btn-reject:hover { background-color: #dc2626; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Panel de Auditoría - Registros de Coordinadores</h1>
+        <span>Oír, Ver y Callar</span>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha/Hora</th>
+                <th>Coordinador</th>
+                <th>Tipo de Novedad</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-auditoria">
+            </tbody>
+    </table>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        // 1. Configuración de Firebase (REEMPLAZA CON TUS DATOS)
+        const firebaseConfig = {
+           "AIzaSyBU3oWLwBkIc_5riruLGc3dFS5wHo2RV0s",
+            authDomain: "sistema-vigilancia-6851e.firebaseapp.com",
+            projectId: "sistema-vigilancia-6851e",
+            storageBucket: "sistema-vigilancia-6851e.firebasestorage.app",
+            messagingSenderId: "714792023462",
+            appId: "1:714792023462:web:4f560ecf2a16e6a041cb67"
+        };
+
+        // Inicializar Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        // 2. Referencia al nodo donde los coordinadores suben su información
+        // Asumiendo que el nodo se llama "registros_coordinadores"
+        const reportesRef = db.ref('registros_coordinadores');
+
+        // 3. Función para cargar los registros en la tabla
+        function cargarRegistros() {
+            const tabla = document.getElementById('tabla-auditoria');
+
+            // Escuchamos los cambios en tiempo real
+            reportesRef.on('value', (snapshot) => {
+                tabla.innerHTML = ''; // Limpiar la tabla antes de recargar
+                
+                if(!snapshot.exists()) {
+                    tabla.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay registros para auditar.</td></tr>';
+                    return;
+                }
+
+                snapshot.forEach((childSnapshot) => {
+                    const id = childSnapshot.key;
+                    const data = childSnapshot.val();
+
+                    // Solo mostrar los que están pendientes de revisión (Opcional)
+                    if(data.estado === 'Pendiente') {
+                        const fila = `
+                            <tr>
+                                <td>${data.fecha || 'Sin fecha'}</td>
+                                <td><strong>${data.nombre_coordinador || 'Desconocido'}</strong></td>
+                                <td>${data.tipo || 'N/A'}</td>
+                                <td>${data.descripcion || 'Sin detalles'}</td>
+                                <td><span class="badge bg-pending">${data.estado}</span></td>
+                                <td>
+                                    <button class="btn btn-approve" onclick="auditarRegistro('${id}', 'Aprobado')">✓ Conforme</button>
+                                    <button class="btn btn-reject" onclick="auditarRegistro('${id}', 'Rechazado')">✕ Rechazar</button>
+                                </td>
+                            </tr>
+                        `;
+                        tabla.innerHTML += fila;
+                    }
+                });
+            });
+        }
+
+        // 4. Función para actualizar el estado del registro
+        window.auditarRegistro = function(id, nuevoEstado) {
+            if(confirm(`¿Estás seguro de marcar este registro como ${nuevoEstado}?`)) {
+                db.ref(`registros_coordinadores/${id}`).update({
+                    estado: nuevoEstado,
+                    fecha_auditoria: new Date().toLocaleString()
+                }).then(() => {
+                    console.log("Auditoría guardada con éxito.");
+                }).catch((error) => {
+                    console.error("Error al actualizar:", error);
+                    alert("Hubo un error de conexión con la base de datos.");
+                });
+            }
+        };
+
+        // Iniciar la carga al abrir la página
+        window.onload = cargarRegistros;
+    </script>
+</body>
+</html>
