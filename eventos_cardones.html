@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordinación y Auditoría de Eventos - Club Cardones</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root { --p: #0E2F44; --s: #D4AF37; --g: #27AE60; --w: #FFFFFF; --t: #F4F6F7; --border: #BDC3C7; --bad: #C0392B; --good: #F39C12; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--t); margin: 0; padding: 20px; color: #333; }
+        .header { background: var(--p); color: var(--w); padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; border-bottom: 4px solid var(--s);}
+        .header h1 { margin: 0; font-size: 1.8em; letter-spacing: 1px;}
+        .header p { margin: 5px 0 0 0; color: #BDC3C7; font-size: 0.9em; }
+        
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; }
+        .tab-btn { padding: 12px 20px; border: none; background: #ddd; cursor: pointer; border-radius: 8px 8px 0 0; font-weight: bold; font-size: 0.95em; color: var(--p); transition: 0.3s; white-space: nowrap;}
+        .tab-btn.active { background: var(--w); color: var(--p); border-top: 4px solid var(--s); }
+        .tab-content { background: var(--w); padding: 25px; border-radius: 0 8px 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: none; }
+        .tab-content.active { display: block; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .form-group { display: flex; flex-direction: column; }
+        label { font-weight: bold; margin-bottom: 5px; font-size: 0.85em; color: var(--p); text-transform: uppercase; }
+        input[type="text"], input[type="number"], input[type="time"], input[type="date"], select, textarea { padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-family: inherit; font-size: 1em; }
+        textarea { resize: vertical; min-height: 80px; }
+        
+        .radio-group { display: flex; gap: 15px; align-items: center; height: 100%; padding: 10px 0;}
+        .radio-group label { text-transform: none; font-size: 1em; font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 5px;}
+
+        .btn { padding: 12px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; transition: 0.3s; font-size: 1em; display: inline-flex; align-items: center; justify-content: center; gap: 8px;}
+        .btn-send { background: var(--p); width: 100%; font-size: 1.1em; margin-top: 10px; padding: 15px;}
+        .btn-send:hover { background: #081d2a; }
+        .btn-pdf { background: var(--s); color: var(--p); padding: 8px 12px; font-size: 0.85em; }
+        .btn-rate { background: #8E44AD; padding: 8px 12px; font-size: 0.85em; }
+
+        .section-title { color: var(--s); border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 15px; margin-top: 0;}
+
+        /* Estilos del panel de proveedor dinámico */
+        #panelProveedor { display: none; background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 5px solid var(--p); margin-bottom: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        .reglamento-box { background: #FEF9E7; border: 2px dashed #F39C12; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        .reglamento-box h4 { margin: 0 0 10px 0; color: #D35400; display: flex; align-items: center; gap: 8px; }
+        .reglamento-box ul { margin: 0; padding-left: 20px; font-size: 0.95em; line-height: 1.6; color: #333; }
+        .checkbox-confirm { display: flex; align-items: center; gap: 10px; margin-top: 15px; font-weight: bold; color: var(--bad); cursor: pointer; }
+        .checkbox-confirm input { transform: scale(1.5); cursor: pointer; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--p); color: var(--w); }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
+        
+        /* Modal Calificación */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; }
+        .rating-btns { display: flex; gap: 10px; margin: 15px 0; }
+        .rate-btn { flex: 1; padding: 15px; border: none; border-radius: 5px; font-weight: bold; color: white; cursor: pointer; }
+        .rate-exc { background: var(--g); } .rate-reg { background: var(--good); } .rate-bad { background: var(--bad); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🗓️ Logística de Eventos - Coordinadores</h1>
+        <p>Club Cardones & Seguridad El Cielo Parque Residencial</p>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('registro')">📝 Solicitar Logística (Nuevo Evento)</button>
+        <button class="tab-btn" onclick="switchTab('auditoria')">🛡️ Panel de Auditoría (Nube)</button>
+    </div>
+
+    <div id="registro" class="tab-content active">
+        <form id="formEvento">
+            <h3 class="section-title">Datos Generales del Evento</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nombre del Evento:</label>
+                    <input type="text" id="eNombre" required placeholder="Ej. Boda Civil Familia Pérez">
+                </div>
+                <div class="form-group">
+                    <label>Lugar:</label>
+                    <select id="eLugar" required>
+                        <option value="">Seleccione ubicación...</option>
+                        <option value="Salón">Salón</option>
+                        <option value="Jardín">Jardín</option>
+                        <option value="Work Space">Work Space</option>
+                        <option value="Terraza">Terraza</option>
+                        <option value="Salón Guayacanes">Salón Guayacanes</option>
+                        <option value="Canchas Padel (1ra Etapa)">Canchas Padel (1ra Etapa)</option>
+                        <option value="Canchas Padel (2da Etapa)">Canchas Padel (2da Etapa)</option>
+                        <option value="Cancha Fútbol Chica">Cancha Fútbol Chica</option>
+                        <option value="Cancha Fútbol Grande">Cancha Fútbol Grande</option>
+                        <option value="Alberca">Alberca</option>
+                        <option value="Restaurante">Restaurante</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fecha del Evento:</label>
+                    <input type="date" id="eFecha" required>
+                </div>
+                <div class="form-group">
+                    <label>Horario del Evento:</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="time" id="eHoraInicio" required style="width: 50%;">
+                        <input type="time" id="eHoraFin" required style="width: 50%;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Núm. de Invitados (Aprox):</label>
+                    <input type="number" id="eInvitados" required placeholder="Ej. 50">
+                </div>
+                <div class="form-group">
+                    <label>Coordinador Responsable:</label>
+                    <input type="text" id="eOrgNombre" required placeholder="Tu nombre">
+                </div>
+            </div>
+
+            <h3 class="section-title">Requerimientos Operativos</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>¿Habrá Valet Parking?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="eValet" value="Sí" required> Sí</label>
+                        <label><input type="radio" name="eValet" value="No"> No</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Carritos de Golf (Traslados):</label>
+                    <select id="eCarritos" required>
+                        <option value="0">Ninguno (0)</option>
+                        <option value="1">1 Carrito</option>
+                        <option value="2">2 Carritos</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>¿Elemento fijo p/ salida de proveedores?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="eFijo" value="Sí" required> Sí</label>
+                        <label><input type="radio" name="eFijo" value="No"> No</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>¿Requiere Proveedores Externos?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="eProv" value="Sí" required onchange="toggleProveedor(true)"> Sí</label>
+                        <label><input type="radio" name="eProv" value="No" onchange="toggleProveedor(false)"> No</label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="panelProveedor">
+                <h3 class="section-title" style="color: var(--p); display:flex; justify-content:space-between; align-items:center;">
+                    📦 Detalles de Proveedores Externos
+                    <button type="button" class="btn" style="background: var(--s); color: var(--p); padding: 5px 10px; font-size: 0.8em;" onclick="agregarProveedorUI()">➕ Añadir Proveedor</button>
+                </h3>
+                
+                <div id="listaProveedores"></div>
+
+                <div class="reglamento-box">
+                    <h4>⚠️ Reglamento de Uso de Montacargas</h4>
+                    <ul>
+                        <li>Usen <strong>solo para materiales</strong>, no personas 🚷.</li>
+                        <li>Botón Verde superior "⬆️" (Subir).</li>
+                        <li>Botón verde inferior "⬇️" (Bajar).</li>
+                        <li>Botón rojo 🛑 paro de emergencia.</li>
+                        <li><strong>PESO MÁXIMO: 800 Kg.</strong></li>
+                        <li>Por favor cerrar puertas antes de bajar o subir.</li>
+                        <li>Tomen precauciones, lleguen con tiempo para evitar prisas, la seguridad es lo primero.</li>
+                    </ul>
+                    <label class="checkbox-confirm">
+                        <input type="checkbox" id="pReglamentoConfirm" value="Confirmado">
+                        Confirmo que he compartido estas reglas con los proveedores.
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Consignas Específicas para Seguridad (General del evento):</label>
+                <textarea id="eConsignas" placeholder="Ej. Revisar invitaciones en puerta, prohibido el paso con cristales..."></textarea>
+            </div>
+
+            <button type="submit" id="btnSubmit" class="btn btn-send">📲 Generar Orden y Sincronizar en la Nube</button>
+        </form>
+    </div>
+
+    <div id="auditoria" class="tab-content">
+        <h3 class="section-title">Panel Central: Eventos Registrados (Nube)</h3>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr><th>Fecha</th><th>Evento / Lugar</th><th>Invitados</th><th>Proveedores</th><th>Evaluación a Seguridad</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="bodyEventos">
+                    <tr><td colspan="6" style="text-align:center;">Conectando con la base de datos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modalCalificar" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0; color:var(--p);">Evaluar Desempeño de Seguridad</h3>
+            <p style="font-size:0.9em; color:#666;">Evento: <strong id="califEventoNombre"></strong></p>
+            <p style="font-size:0.8em; color:gray;">Como coordinador/auditor, evalúa el apoyo brindado por el equipo de prevención en este evento.</p>
+            
+            <div class="rating-btns">
+                <button class="rate-btn rate-exc" onclick="setCalificacion('Excelente')">⭐ Excelente</button>
+                <button class="rate-btn rate-reg" onclick="setCalificacion('Bueno')">👍 Bueno</button>
+                <button class="rate-btn rate-bad" onclick="setCalificacion('Malo')">⚠️ Malo</button>
+            </div>
+            
+            <div class="form-group" style="margin-top:15px;">
+                <label>Observaciones:</label>
+                <textarea id="califObs" placeholder="Escriba comentarios, áreas de mejora o felicitaciones para los guardias..."></textarea>
+            </div>
+            
+            <div style="display:flex; gap:10px; margin-top: 15px;">
+                <button class="btn btn-send" style="margin:0;" onclick="guardarCalificacion()">Guardar Evaluación en Nube</button>
+                <button class="btn" style="background:#95A5A6; width:100%; margin:0;" onclick="cerrarModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pdf-container" style="display: none;">
+        <div id="pdf-content" style="padding: 40px; font-family: Arial, sans-serif; color: #333;">
+            <div style="border-bottom: 3px solid #0E2F44; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                    <h2 style="margin: 0; color: #0E2F44;">ORDEN DE SERVICIO - PREVENCIÓN</h2>
+                    <h4 style="margin: 5px 0 0 0; color: #D4AF37;">Club Cardones / El Cielo Parque Residencial</h4>
+                </div>
+                <div style="text-align: right;">
+                    <strong style="font-size: 1.2em; color: #C0392B;" id="pdf-folio"></strong>
+                </div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.95em;">
+                <tr><td style="padding: 8px; border: 1px solid #ddd; background: #F4F6F7; width: 30%;"><strong>Nombre del Evento:</strong></td><td style="padding: 8px; border: 1px solid #ddd;" id="pdf-nombre"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd; background: #F4F6F7;"><strong>Lugar:</strong></td><td style="padding: 8px; border: 1px solid #ddd;" id="pdf-lugar"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd; background: #F4F6F7;"><strong>Fecha y Horario:</strong></td><td style="padding: 8px; border: 1px solid #ddd;" id="pdf-fecha"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd; background: #F4F6F7;"><strong>Aforo Aproximado:</strong></td><td style="padding: 8px; border: 1px solid #ddd;" id="pdf-invitados"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd; background: #F4F6F7;"><strong>Coordinador Resp.:</strong></td><td style="padding: 8px; border: 1px solid #ddd;" id="pdf-organizador"></td></tr>
+            </table>
+
+            <h3 style="color: #0E2F44; border-bottom: 1px solid #BDC3C7; padding-bottom: 5px; font-size: 1.1em;">Requerimientos Logísticos</h3>
+            <ul style="line-height: 1.8;">
+                <li><strong>Servicio de Valet Parking:</strong> <span id="pdf-valet"></span></li>
+                <li><strong>Carritos de Golf asignados:</strong> <span id="pdf-carts"></span></li>
+                <li><strong>Elemento fijo p/ Proveedores:</strong> <span id="pdf-fijo"></span></li>
+            </ul>
+
+            <div id="pdf-seccion-proveedor" style="display: none; margin-top: 20px;">
+                <h3 style="color: #0E2F44; border-bottom: 1px solid #BDC3C7; padding-bottom: 5px; font-size: 1.1em;">Datos de Proveedores Externos</h3>
+                <div id="pdf-lista-proveedores"></div>
+                <p style="font-size: 0.85em; color: #D35400; font-weight: bold; margin-top: 10px;">* El coordinador confirma haber notificado a los proveedores sobre el reglamento de montacargas.</p>
+            </div>
+
+            <h3 style="color: #0E2F44; border-bottom: 1px solid #BDC3C7; padding-bottom: 5px; font-size: 1.1em; margin-top:20px;">Consignas Específicas de Seguridad</h3>
+            <p id="pdf-consignas" style="background: #FEF9E7; padding: 15px; border-radius: 5px; border-left: 5px solid #F39C12; white-space: pre-wrap; font-size: 0.95em;"></p>
+            
+            <div style="margin-top: 60px; display: flex; justify-content: space-around; text-align: center;">
+                <div>
+                    <p>___________________________</p>
+                    <p style="margin: 0; font-weight: bold; font-size: 0.9em;" id="firma-coordinador">Coordinador</p>
+                    <p style="margin: 0; font-size: 0.8em; color: gray;">Responsable del Evento</p>
+                </div>
+                <div>
+                    <p>___________________________</p>
+                    <p style="margin: 0; font-weight: bold; font-size: 0.9em;">Prevención y Seguridad</p>
+                    <p style="margin: 0; font-size: 0.8em; color: gray;">Acuse de Recibo en Turno</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // 1. Importar SDKs de Firebase V10
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // 2. Configuración extraída de tu imagen
+        const firebaseConfig = {
+            apiKey: "AIzaSyBU3oWLwBkIc_5riruLGc3dFS5wHo2RV0s",
+            authDomain: "sistema-vigilancia-6851e.firebaseapp.com",
+            projectId: "sistema-vigilancia-6851e",
+            storageBucket: "sistema-vigilancia-6851e.firebasestorage.app",
+            messagingSenderId: "714792023462",
+            appId: "1:714792023462:web:4f560ecf2a16e6a041cb67"
+        };
+
+        // 3. Inicializar Firebase y Firestore
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Variables Globales
+        window.bdEventos = [];
+        window.eventoAcalificar = null;
+        window.calificacionTemp = '';
+        const numeroWhatsAppHugo = "526695931812"; 
+
+        document.getElementById('eFecha').valueAsDate = new Date();
+
+        // 4. Escuchar la base de datos en tiempo real (Auditoría)
+        const eventosRef = collection(db, "eventos");
+        const q = query(eventosRef, orderBy("timestamp", "desc")); // Traer los más nuevos primero
+
+        onSnapshot(q, (snapshot) => {
+            window.bdEventos = [];
+            snapshot.forEach((doc) => {
+                window.bdEventos.push({ firebaseId: doc.id, ...doc.data() });
+            });
+            window.renderizarTabla();
+        }, (error) => {
+            console.error("Error leyendo de Firebase: ", error);
+            document.getElementById('bodyEventos').innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Error de conexión. Verifica las reglas de Firestore.</td></tr>';
+        });
+
+        // 5. Asignar funciones al objeto window para que el HTML pueda llamarlas
+        window.switchTab = function(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+            if(tabId === 'auditoria') window.renderizarTabla();
+        }
+
+        window.agregarProveedorUI = function() {
+            const index = document.querySelectorAll('.proveedor-item').length + 1;
+            const div = document.createElement('div');
+            div.className = 'proveedor-item';
+            div.style.cssText = 'background: white; padding: 15px; border-radius: 5px; border: 1px solid var(--border); margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);';
+            div.innerHTML = `
+                <h4 style="margin-top:0; color:var(--p); display:flex; justify-content:space-between; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+                    Proveedor ${index}
+                    ${index > 1 ? `<button type="button" onclick="this.parentElement.parentElement.remove()" style="background:var(--bad); color:white; border:none; border-radius:3px; cursor:pointer; padding:3px 8px; font-weight:bold;">X Eliminar</button>` : ''}
+                </h4>
+                <div class="form-grid">
+                    <div class="form-group"><label>Nombre del Proveedor:</label><input type="text" class="prov-nombre" required></div>
+                    <div class="form-group"><label>Actividad o Giro:</label><input type="text" class="prov-giro" required></div>
+                    <div class="form-group"><label>Personas del Equipo:</label><input type="number" class="prov-cantidad"></div>
+                    <div class="form-group"><label>Fecha de Retiro:</label><input type="date" class="prov-retiro"></div>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;"><label>Nombres de los Integrantes:</label><textarea class="prov-nombres"></textarea></div>
+                <div class="form-group"><label>Notas Especiales:</label><textarea class="prov-notas"></textarea></div>
+            `;
+            document.getElementById('listaProveedores').appendChild(div);
+        }
+
+        window.toggleProveedor = function(mostrar) {
+            const panel = document.getElementById('panelProveedor');
+            const checkbox = document.getElementById('pReglamentoConfirm');
+            if(mostrar) {
+                panel.style.display = 'block';
+                checkbox.required = true;
+                if(document.querySelectorAll('.proveedor-item').length === 0) window.agregarProveedorUI();
+            } else {
+                panel.style.display = 'none';
+                checkbox.required = false;
+                checkbox.checked = false;
+                document.getElementById('listaProveedores').innerHTML = ''; 
+            }
+        }
+
+        // 6. Guardar Nuevo Evento en Firebase
+        document.getElementById('formEvento').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const btnSubmit = document.getElementById('btnSubmit');
+            const reqProveedor = document.querySelector('input[name="eProv"]:checked').value;
+            if(reqProveedor === "Sí" && !document.getElementById('pReglamentoConfirm').checked) {
+                alert("Debe confirmar que ha compartido el reglamento del montacargas.");
+                return;
+            }
+
+            btnSubmit.innerText = "⏳ Guardando en la Nube...";
+            btnSubmit.disabled = true;
+
+            const folioId = Math.floor(1000 + Math.random() * 9000); 
+            
+            let proveedoresArray = [];
+            if(reqProveedor === "Sí") {
+                document.querySelectorAll('.proveedor-item').forEach(item => {
+                    proveedoresArray.push({
+                        nombre: item.querySelector('.prov-nombre').value,
+                        giro: item.querySelector('.prov-giro').value,
+                        cant: item.querySelector('.prov-cantidad').value || '0',
+                        fechaRetiro: item.querySelector('.prov-retiro').value,
+                        nombres: item.querySelector('.prov-nombres').value,
+                        notas: item.querySelector('.prov-notas').value
+                    });
+                });
+            }
+
+            const nuevoEvento = {
+                id: folioId,
+                timestamp: new Date().getTime(), // Para ordenar cronológicamente
+                nombre: document.getElementById('eNombre').value,
+                lugar: document.getElementById('eLugar').value,
+                fecha: document.getElementById('eFecha').value,
+                horario: `${document.getElementById('eHoraInicio').value} a ${document.getElementById('eHoraFin').value}`,
+                invitados: document.getElementById('eInvitados').value,
+                orgNombre: document.getElementById('eOrgNombre').value,
+                fijo: document.querySelector('input[name="eFijo"]:checked').value,
+                valet: document.querySelector('input[name="eValet"]:checked').value,
+                carts: document.getElementById('eCarritos').value,
+                reqProv: reqProveedor,
+                proveedores: proveedoresArray, 
+                consignas: document.getElementById('eConsignas').value || 'Sin consignas especiales.',
+                evaluacion: null, 
+                observacionesEval: ''
+            };
+
+            try {
+                // Agregar a Firebase Firestore
+                await addDoc(collection(db, "eventos"), nuevoEvento);
+                
+                // Construir mensaje de WhatsApp
+                let mensajeWsp = `*NUEVO EVENTO CLUB CARDONES*%0A*Folio:* ${folioId}%0A*Coordinador:* ${nuevoEvento.orgNombre}%0A*Evento:* ${nuevoEvento.nombre}%0A*Lugar:* ${nuevoEvento.lugar}%0A*Fecha:* ${nuevoEvento.fecha} (${nuevoEvento.horario})%0A*Invitados:* ${nuevoEvento.invitados}%0A%0A*Logística:*%0A- Valet: ${nuevoEvento.valet}%0A- Carritos: ${nuevoEvento.carts}`;
+                
+                if(reqProveedor === "Sí") {
+                    mensajeWsp += `%0A%0A*PROVEEDORES EXTERNOS:*`;
+                    nuevoEvento.proveedores.forEach((p, index) => {
+                        mensajeWsp += `%0A${index+1}. ${p.nombre} (${p.giro}) - ${p.cant} pax.`;
+                    });
+                    mensajeWsp += `%0A%0A- Elemento fijo: ${nuevoEvento.fijo}`;
+                }
+                mensajeWsp += `%0A%0A*Consignas:* ${nuevoEvento.consignas}%0A%0A_Generado desde Plataforma en la Nube_`;
+                
+                const url = `https://wa.me/${numeroWhatsAppHugo}?text=${mensajeWsp}`;
+                
+                alert("✅ Evento registrado y respaldado en la nube.\n\nSe abrirá WhatsApp para notificar a la caseta de Seguridad.");
+                this.reset();
+                window.toggleProveedor(false); 
+                document.getElementById('eFecha').valueAsDate = new Date();
+                window.open(url, '_blank');
+
+            } catch (error) {
+                console.error("Error al guardar en Firebase: ", error);
+                alert("Hubo un error al guardar en la base de datos.");
+            } finally {
+                btnSubmit.innerText = "📲 Generar Orden y Sincronizar en la Nube";
+                btnSubmit.disabled = false;
+            }
+        });
+
+        window.renderizarTabla = function() {
+            const tbody = document.getElementById('bodyEventos');
+            tbody.innerHTML = '';
+            
+            if(window.bdEventos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay eventos registrados en la base de datos.</td></tr>';
+                return;
+            }
+
+            window.bdEventos.forEach(ev => {
+                let badgeCalif = '<span style="color:gray; font-size:0.9em;">Pendiente</span>';
+                if(ev.evaluacion === 'Excelente') badgeCalif = '⭐ <strong style="color:#27AE60;">Excelente</strong>';
+                if(ev.evaluacion === 'Bueno') badgeCalif = '👍 <strong style="color:#F39C12;">Bueno</strong>';
+                if(ev.evaluacion === 'Malo') badgeCalif = '⚠️ <strong style="color:#C0392B;">Malo</strong>';
+
+                let textoProv = '❌ No aplica';
+                if (ev.reqProv === 'Sí' && ev.proveedores && ev.proveedores.length > 0) {
+                    textoProv = `✅ ${ev.proveedores.nombre} ${ev.proveedores.length > 1 ? `<br><small>(+${ev.proveedores.length - 1} más)</small>` : ''}`;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${ev.fecha}</strong><br><span style="font-size:0.8em; color:gray;">${ev.horario}</span></td>
+                        <td><strong>${ev.nombre}</strong><br><span style="color:#2980B9;">📍 ${ev.lugar}</span></td>
+                        <td>${ev.invitados} pax</td>
+                        <td style="font-size:0.85em;">${textoProv}</td>
+                        <td>${badgeCalif}</td>
+                        <td style="white-space: nowrap;">
+                            <button class="btn btn-pdf" onclick="prepararPDF('${ev.firebaseId}')" title="Descargar Pase">📄 PDF</button>
+                            ${!ev.evaluacion ? `<button class="btn btn-rate" onclick="abrirModalCalificar('${ev.firebaseId}')">Evaluar</button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 7. Actualizar calificación en Firebase
+        window.abrirModalCalificar = function(firebaseId) {
+            window.eventoAcalificar = window.bdEventos.find(e => e.firebaseId === firebaseId);
+            document.getElementById('califEventoNombre').innerText = window.eventoAcalificar.nombre;
+            document.getElementById('califObs').value = '';
+            window.calificacionTemp = '';
+            document.querySelectorAll('.rate-btn').forEach(btn => btn.style.opacity = '1');
+            document.getElementById('modalCalificar').style.display = 'flex';
+        }
+
+        window.setCalificacion = function(val) {
+            window.calificacionTemp = val;
+            document.querySelectorAll('.rate-btn').forEach(btn => btn.style.opacity = '0.4');
+            event.currentTarget.style.opacity = '1';
+        }
+
+        window.guardarCalificacion = async function() {
+            if(!window.calificacionTemp) { alert("Selecciona una calificación."); return; }
+            
+            try {
+                // Actualiza el documento específico en Firebase
+                const eventoRef = doc(db, "eventos", window.eventoAcalificar.firebaseId);
+                await updateDoc(eventoRef, {
+                    evaluacion: window.calificacionTemp,
+                    observacionesEval: document.getElementById('califObs').value
+                });
+                
+                alert("✅ Evaluación sincronizada en la nube. ¡Gracias por el reporte!");
+                window.cerrarModal();
+            } catch (error) {
+                console.error("Error al actualizar: ", error);
+                alert("Error al intentar guardar la evaluación.");
+            }
+        }
+
+        window.cerrarModal = function() {
+            document.getElementById('modalCalificar').style.display = 'none';
+            window.eventoAcalificar = null;
+        }
+
+        // 8. Lógica del PDF (Mantenida intacta pero usando la variable global actualizada)
+        window.prepararPDF = function(firebaseId) {
+            const ev = window.bdEventos.find(e => e.firebaseId === firebaseId);
+            if(!ev) return;
+
+            document.getElementById('pdf-folio').innerText = `FOLIO-${ev.id}`;
+            document.getElementById('pdf-nombre').innerText = ev.nombre;
+            document.getElementById('pdf-lugar').innerText = ev.lugar;
+            document.getElementById('pdf-fecha').innerText = `${ev.fecha} / ${ev.horario}`;
+            document.getElementById('pdf-invitados').innerText = `${ev.invitados} personas`;
+            document.getElementById('pdf-organizador').innerText = ev.orgNombre;
+            document.getElementById('firma-coordinador').innerText = ev.orgNombre;
+            
+            document.getElementById('pdf-fijo').innerText = ev.fijo;
+            document.getElementById('pdf-valet').innerText = ev.valet;
+            document.getElementById('pdf-carts').innerText = ev.carts;
+            document.getElementById('pdf-consignas').innerText = ev.consignas;
+
+            const divProveedor = document.getElementById('pdf-seccion-proveedor');
+            if(ev.reqProv === "Sí") {
+                divProveedor.style.display = 'block';
+                let htmlProv = '';
+                ev.proveedores.forEach((p, index) => {
+                    htmlProv += `
+                        <div style="margin-bottom: 15px; border-bottom: 1px dashed #ddd; padding-bottom: 10px;">
+                            <h4 style="margin: 0 0 5px 0; color: #0E2F44; font-size: 1em;">Proveedor ${index + 1}: ${p.nombre || 'N/A'}</h4>
+                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size: 0.9em;">
+                                <tr><td style="padding: 4px; border: 1px solid #ddd; background: #fdfbf7; width: 30%;"><strong>Giro / Actividad:</strong></td><td style="padding: 4px; border: 1px solid #ddd;">${p.giro || 'N/A'}</td></tr>
+                                <tr><td style="padding: 4px; border: 1px solid #ddd; background: #fdfbf7;"><strong>Cant. Personas:</strong></td><td style="padding: 4px; border: 1px solid #ddd;">${p.cant || '0'} personas</td></tr>
+                            </table>
+                        </div>
+                    `;
+                });
+                document.getElementById('pdf-lista-proveedores').innerHTML = htmlProv;
+            } else {
+                divProveedor.style.display = 'none';
+            }
+
+            const element = document.getElementById('pdf-content');
+            const opt = {
+                margin: 0.5,
+                filename: `Orden_Servicio_${ev.id}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            document.getElementById('pdf-container').style.display = 'block';
+            html2pdf().set(opt).from(element).save().then(() => {
+                document.getElementById('pdf-container').style.display = 'none';
+            });
+        }
+    </script>
+</body>
+</html>
